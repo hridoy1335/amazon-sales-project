@@ -14,19 +14,26 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
       
-      - name: Install and validate
+      - name: Install Databricks CLI
         run: |
-          pip install ruff pytest
-          [ -f requirements.txt ] && pip install -r requirements.txt || true
-          ruff check . || true
-          pytest tests/ || true
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          databricks --version
+      
+      - name: Validate Bundle
+        env:
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: |
+          databricks bundle validate -t dev
+          databricks bundle validate -t qa
+          databricks bundle validate -t prod
 
   deploy-dev:
     runs-on: ubuntu-latest
@@ -34,29 +41,25 @@ jobs:
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
     environment: dev
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: Deploy to DEV
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          databricks --version
+      
+      - name: Deploy Bundle to DEV
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          pip install databricks-cli
-          
-          cat > ~/.databrickscfg <<EOF
-          [DEFAULT]
-          host = ${{ env.DATABRICKS_HOST }}
-          token = $DATABRICKS_TOKEN
-          EOF
-          
-          databricks workspace import-dir ./notebooks /Workspace/Users/deployment/dev/notebooks --overwrite
-          
-          for job in ./jobs/*.json; do
-            [ -f "$job" ] && databricks jobs create --json-file "$job" 2>/dev/null || databricks jobs reset --json-file "$job"
-          done
+          databricks bundle deploy -t dev
+          echo "✅ Deployed to DEV environment"
 
   deploy-qa:
     runs-on: ubuntu-latest
@@ -64,29 +67,25 @@ jobs:
     if: github.ref == 'refs/heads/qa' && github.event_name == 'push'
     environment: qa
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: Deploy to QA
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          databricks --version
+      
+      - name: Deploy Bundle to QA
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          pip install databricks-cli
-          
-          cat > ~/.databrickscfg <<EOF
-          [DEFAULT]
-          host = ${{ env.DATABRICKS_HOST }}
-          token = $DATABRICKS_TOKEN
-          EOF
-          
-          databricks workspace import-dir ./notebooks /Workspace/Users/deployment/qa/notebooks --overwrite
-          
-          for job in ./jobs/*.json; do
-            [ -f "$job" ] && databricks jobs create --json-file "$job" 2>/dev/null || databricks jobs reset --json-file "$job"
-          done
+          databricks bundle deploy -t qa
+          echo "✅ Deployed to QA environment"
 
   deploy-prod:
     runs-on: ubuntu-latest
@@ -94,26 +93,22 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: prod
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: Deploy to PROD
+      - name: Install Databricks CLI
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          databricks --version
+      
+      - name: Deploy Bundle to PROD
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
-          pip install databricks-cli
-          
-          cat > ~/.databrickscfg <<EOF
-          [DEFAULT]
-          host = ${{ env.DATABRICKS_HOST }}
-          token = $DATABRICKS_TOKEN
-          EOF
-          
-          databricks workspace import-dir ./notebooks /Workspace/Users/deployment/prod/notebooks --overwrite
-          
-          for job in ./jobs/*.json; do
-            [ -f "$job" ] && databricks jobs create --json-file "$job" 2>/dev/null || databricks jobs reset --json-file "$job"
-          done
+          databricks bundle deploy -t prod
+          echo "✅ Deployed to PROD environment"
