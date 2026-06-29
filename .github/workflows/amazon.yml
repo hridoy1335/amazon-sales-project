@@ -2,16 +2,9 @@ name: Databricks CI/CD
 
 on:
   push:
-    branches: [main, develop]
+    branches: [dev, qa, main]
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deploy to environment'
-        required: true
-        type: choice
-        options: [dev, qa, prod]
+    branches: [dev, qa, main]
 
 env:
   PYTHON_VERSION: '3.10'
@@ -38,7 +31,7 @@ jobs:
   deploy-dev:
     runs-on: ubuntu-latest
     needs: validate
-    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
     environment: dev
     steps:
       - uses: actions/checkout@v4
@@ -47,7 +40,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: Deploy
+      - name: Deploy to DEV
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
@@ -67,8 +60,8 @@ jobs:
 
   deploy-qa:
     runs-on: ubuntu-latest
-    needs: deploy-dev
-    if: github.ref == 'refs/heads/develop' || github.event_name == 'workflow_dispatch'
+    needs: validate
+    if: github.ref == 'refs/heads/qa' && github.event_name == 'push'
     environment: qa
     steps:
       - uses: actions/checkout@v4
@@ -77,7 +70,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: Deploy
+      - name: Deploy to QA
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
@@ -97,8 +90,8 @@ jobs:
 
   deploy-prod:
     runs-on: ubuntu-latest
-    needs: deploy-qa
-    if: github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'prod')
+    needs: validate
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: prod
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +100,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       
-      - name: Deploy
+      - name: Deploy to PROD
         env:
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
