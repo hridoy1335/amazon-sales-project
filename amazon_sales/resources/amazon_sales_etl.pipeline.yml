@@ -1,0 +1,20 @@
+# The main pipeline for amazon_sales
+
+resources:
+  pipelines:
+    amazon_sales_etl:
+      name: amazon_sales_etl
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      serverless: true
+      root_path: "../src/amazon_sales_etl"
+
+      libraries:
+        - glob:
+            include: ../src/amazon_sales_etl/transformations/**
+
+      environment:
+        dependencies:
+          # We include every dependency defined by pyproject.toml by defining an editable environment
+          # that points to the folder where pyproject.toml is deployed.
+          - --editable ${workspace.file_path}
