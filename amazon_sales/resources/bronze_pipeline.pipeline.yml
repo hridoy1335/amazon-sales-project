@@ -1,0 +1,34 @@
+resources:
+  pipelines:
+    amazon_sales_bronze:
+      name: Amazon Sales Bronze Pipeline
+      
+      # Both catalog and target required for serverless
+      catalog: ${var.catalog}
+      target: ${var.schema}
+      
+      configuration:
+        catalog: ${var.catalog}
+        schema: ${var.schema}
+        source_table: amazon
+      
+      libraries:
+        - notebook:
+            path: /Users/rkhridoyinfo@gmail.com/dev-amazon-sales-project/amazon_sales/src/amazon_sales_etl/transformations/bronze/bronze
+      
+      # Serverless compute (required for this workspace)
+      serverless: true
+      
+      # Pipeline settings
+      development: true
+      continuous: false
+      photon: true
+      channel: CURRENT
+      
+      # Notifications
+      notifications:
+        - email_recipients:
+            - rkhridoyinfo@gmail.com
+          alerts:
+            - on-update-failure
+            - on-flow-failure
