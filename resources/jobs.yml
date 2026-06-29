@@ -1,0 +1,47 @@
+resources:
+  jobs:
+    amazon_sales_etl_pipeline:
+      name: "Amazon Sales ETL Pipeline - ${bundle.target}"
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+      
+      schedule:
+        quartz_cron_expression: "0 0 2 ? * * *"
+        timezone_id: "UTC"
+        pause_status: UNPAUSED
+      
+      job_clusters:
+        - job_cluster_key: main
+          new_cluster:
+            spark_version: 13.3.x-scala2.12
+            node_type_id: i3.xlarge
+            num_workers: 2
+            aws_attributes:
+              availability: ON_DEMAND
+              zone_id: auto
+      
+      tasks:
+        - task_key: ingest_raw_data
+          job_cluster_key: main
+          notebook_task:
+            notebook_path: ./notebooks/01_data_ingestion
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              env: ${bundle.target}
+        
+        - task_key: transform_data
+          depends_on:
+            - task_key: ingest_raw_data
+          job_cluster_key: main
+          notebook_task:
+            notebook_path: ./notebooks/02_data_transformation
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              env: ${bundle.target}
+      
+      tags:
+        project: amazon-sales
+        environment: ${bundle.target}
+        managed-by: dab

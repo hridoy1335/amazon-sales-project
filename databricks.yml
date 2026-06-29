@@ -1,0 +1,49 @@
+# Databricks Asset Bundle Configuration
+# Product: Databricks Declarative Automation Bundles (DAB)
+
+bundle:
+  name: prod-amazon-sales-project
+
+include:
+  - resources/*.yml
+
+workspace:
+  root_path: ~/.bundle/${bundle.name}/${bundle.target}
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: main
+  
+  schema:
+    description: Schema name for tables
+    default: amazon_sales
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+    variables:
+      catalog: dev_catalog
+      schema: amazon_sales_dev
+      cluster_name: dev-amazon-sales-cluster
+
+  qa:
+    mode: production
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+    variables:
+      catalog: qa_catalog
+      schema: amazon_sales_qa
+      cluster_name: qa-amazon-sales-cluster
+
+  prod:
+    mode: production
+    workspace:
+      host: ${var.DATABRICKS_HOST}
+    variables:
+      catalog: prod_catalog
+      schema: amazon_sales_prod
+      cluster_name: prod-amazon-sales-cluster

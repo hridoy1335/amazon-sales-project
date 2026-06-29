@@ -9,6 +9,7 @@ on:
 env:
   PYTHON_VERSION: '3.10'
   DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}
+  DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
 
 jobs:
   validate:
@@ -27,13 +28,46 @@ jobs:
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
           databricks --version
       
-      - name: Validate Bundle
-        env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+      - name: Verify Bundle Structure
         run: |
+          echo "Checking for databricks.yml..."
+          if [ ! -f "databricks.yml" ]; then
+            echo "❌ Error: databricks.yml not found!"
+            exit 1
+          fi
+          echo "✅ databricks.yml found"
+          
+          echo "Checking for resources directory..."
+          if [ ! -d "resources" ]; then
+            echo "❌ Error: resources/ directory not found!"
+            exit 1
+          fi
+          echo "✅ resources/ directory found"
+          
+          ls -la
+          echo ""
+          echo "Bundle structure verified!"
+      
+      - name: Validate Bundle - DEV
+        if: github.ref == 'refs/heads/dev' || github.event_name == 'pull_request'
+        run: |
+          echo "Validating DEV target..."
           databricks bundle validate -t dev
+          echo "✅ DEV validation passed"
+      
+      - name: Validate Bundle - QA
+        if: github.ref == 'refs/heads/qa' || github.event_name == 'pull_request'
+        run: |
+          echo "Validating QA target..."
           databricks bundle validate -t qa
+          echo "✅ QA validation passed"
+      
+      - name: Validate Bundle - PROD
+        if: github.ref == 'refs/heads/main' || github.event_name == 'pull_request'
+        run: |
+          echo "Validating PROD target..."
           databricks bundle validate -t prod
+          echo "✅ PROD validation passed"
 
   deploy-dev:
     runs-on: ubuntu-latest
@@ -55,11 +89,15 @@ jobs:
           databricks --version
       
       - name: Deploy Bundle to DEV
-        env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
+          echo "🚀 Deploying to DEV environment..."
           databricks bundle deploy -t dev
-          echo "✅ Deployed to DEV environment"
+          echo "✅ Successfully deployed to DEV environment"
+      
+      - name: Run ETL Pipeline (Optional)
+        run: |
+          echo "To trigger the pipeline, run:"
+          echo "databricks bundle run amazon_sales_etl_pipeline -t dev"
 
   deploy-qa:
     runs-on: ubuntu-latest
@@ -81,11 +119,15 @@ jobs:
           databricks --version
       
       - name: Deploy Bundle to QA
-        env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
+          echo "🚀 Deploying to QA environment..."
           databricks bundle deploy -t qa
-          echo "✅ Deployed to QA environment"
+          echo "✅ Successfully deployed to QA environment"
+      
+      - name: Run ETL Pipeline (Optional)
+        run: |
+          echo "To trigger the pipeline, run:"
+          echo "databricks bundle run amazon_sales_etl_pipeline -t qa"
 
   deploy-prod:
     runs-on: ubuntu-latest
@@ -107,8 +149,17 @@ jobs:
           databricks --version
       
       - name: Deploy Bundle to PROD
-        env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
         run: |
+          echo "🚀 Deploying to PROD environment..."
           databricks bundle deploy -t prod
-          echo "✅ Deployed to PROD environment"
+          echo "✅ Successfully deployed to PROD environment"
+      
+      - name: Deployment Summary
+        run: |
+          echo "📊 Deployment Summary:"
+          echo "  Environment: PRODUCTION"
+          echo "  Branch: main"
+          echo "  Commit: ${{ github.sha }}"
+          echo ""
+          echo "To trigger the pipeline, run:"
+          echo "databricks bundle run amazon_sales_etl_pipeline -t prod"
