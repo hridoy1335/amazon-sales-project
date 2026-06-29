@@ -1,0 +1,20 @@
+# Core dependencies
+databricks-cli==0.213.0
+databricks-sdk==0.23.0
+
+# Data processing
+pandas==2.1.4
+numpy==1.24.3
+pyspark==3.5.0
+
+# Testing
+pytest==7.4.3
+pytest-cov==4.1.0
+
+# Code quality
+ruff==0.1.9
+black==23.12.1
+
+# Utilities
+python-dotenv==1.0.0
+pyyaml==6.0.1
